@@ -16,13 +16,13 @@ const maxNameLength = 63
 // DryRun snapshotting
 var DryRun bool
 
-var (
-	computeService *compute.Service
-	ctx            = context.Background()
-)
+// Ctx is context
+var Ctx = context.Background()
+
+var computeService *compute.Service
 
 func init() {
-	client, err := google.DefaultClient(ctx, compute.ComputeScope)
+	client, err := google.DefaultClient(Ctx, compute.ComputeScope)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func init() {
 func Create(projectName string) {
 	disksService := compute.NewDisksService(computeService)
 	req := disksService.AggregatedList(projectName)
-	if err := req.Filter("labels.auto_snapshot:true").Pages(ctx, func(page *compute.DiskAggregatedList) error {
+	if err := req.Filter("labels.auto_snapshot:true").Pages(Ctx, func(page *compute.DiskAggregatedList) error {
 		for z, disks := range page.Items {
 			for _, disk := range disks.Disks {
 				if len(disk.Users) > 0 && disk.Status == "READY" {
@@ -74,7 +74,7 @@ func Create(projectName string) {
 func Purge(projectName string, pruneDays int) {
 	snapshotsService := compute.NewSnapshotsService(computeService)
 	req := snapshotsService.List(projectName)
-	if err := req.Filter("labels.auto_snapshot:true").Pages(ctx, func(page *compute.SnapshotList) error {
+	if err := req.Filter("labels.auto_snapshot:true").Pages(Ctx, func(page *compute.SnapshotList) error {
 		for _, snapshot := range page.Items {
 			if t, err := time.Parse(time.RFC3339, snapshot.CreationTimestamp); err == nil {
 				if t.Before(time.Now().AddDate(0, 0, -pruneDays)) {
