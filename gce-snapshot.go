@@ -71,13 +71,14 @@ func Create(projectName string) {
 }
 
 // Purge snapshot in GCE
-func Purge(projectName string, pruneDays int) {
+func Purge(projectName string, pruneDays, pruneMonth int) {
 	snapshotsService := compute.NewSnapshotsService(computeService)
 	req := snapshotsService.List(projectName)
 	if err := req.Filter("labels.auto_snapshot:true").Pages(Ctx, func(page *compute.SnapshotList) error {
 		for _, snapshot := range page.Items {
 			if t, err := time.Parse(time.RFC3339, snapshot.CreationTimestamp); err == nil {
-				if t.Before(time.Now().AddDate(0, 0, -pruneDays)) {
+				if t.Before(time.Now().AddDate(0, -pruneMonth, 0)) ||
+					(t.Before(time.Now().AddDate(0, 0, -pruneDays)) && t.Day() != 1) {
 					log.Printf("%s Purge snapshot %s created %s",
 						snapshot.StorageLocations,
 						snapshot.Name,
